@@ -1,8 +1,11 @@
+# !/usr/bin/python
+import daemon
 import threading
 import serial
 from pynput.mouse import Button, Controller
 
-SERIAL_PORT = "/dev/ttyUSB0"
+
+SERIAL_PORT = "COM2"
 BAUDRATE = 9600
 BUTTON_POSITION = (1520, 510)
 
@@ -50,6 +53,8 @@ class InputHandler(object):
 port = serial.Serial(SERIAL_PORT, BAUDRATE)
 handler = InputHandler()
 
-while True:
-    port.write('$086\r')
-    handler.write_data(port.read(8))
+
+with daemon.DaemonContext():
+    while True:
+        port.write('$086\r')
+        handler.write_data(port.read(8))
