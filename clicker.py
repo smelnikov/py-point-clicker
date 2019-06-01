@@ -1,9 +1,10 @@
 import threading
+import serial
 from pynput.mouse import Button, Controller
-from pynput.keyboard import Listener, KeyCode
 
-CLICK_KEY = KeyCode(char='k')
-EXIT_KEY = KeyCode(char='e')
+SERIAL_PORT = "/dev/ttyUSB0"
+BAUDRATE = 9600
+BUTTON_POSITION = (1520, 510)
 
 
 class ClickMouse(threading.Thread):
@@ -12,23 +13,43 @@ class ClickMouse(threading.Thread):
         self.button = button
         self.position = position
 
-    def click(self):
+    def click_button(self):
         mouse.position = self.position
         mouse.click(self.button)
 
 
 mouse = Controller()
-pos = (1520, 510)
-click_thread = ClickMouse(pos)
+click_thread = ClickMouse(BUTTON_POSITION)
 click_thread.start()
 
 
-def on_press(key):
-    if key == CLICK_KEY:
-        click_thread.click()
-    elif key == EXIT_KEY:
-        listener.stop()
+class InputHandler(object):
+    def __init__(self):
+        self.data = [None for i in range(0, 14)]
+
+    def parse_data(self, value):
+        if value[0] == '!':
+            pin8_13 = str(bin(int('0x' + value[1] + value[2], 16))[2:]).zfill(6)
+            pin0_7 = str(bin(int('0x' + value[3] + value[4], 16))[2:]).zfill(8)
+            return pin8_13 + pin0_7
+
+    def write_data(self, value):
+        if value:
+            for (idx, pin_data) in enumerate(reversed(self.parse_data(value))):
+                if self.data[idx] and self.data[idx] != pin_data:
+                    self.pin_changed(idx, pin_data)
+                self.data[idx] = pin_data
+
+    def pin_changed(self, idx, value):
+        print 'Pin%s changed to %s' % (idx, value)
+        if idx == 0:
+            print 'Button clicked!'
+            click_thread.click_button()
 
 
-with Listener(on_press=on_press) as listener:
-    listener.join()
+port = serial.Serial(SERIAL_PORT, BAUDRATE)
+handler = InputHandler()
+
+while True:
+    port.write('$086\r')
+    handler.write_data(port.read(8))
