@@ -5,7 +5,7 @@ import serial
 from pynput.mouse import Button, Controller
 
 
-SERIAL_PORT = "COM2"
+SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 9600
 BUTTON_POSITION = (1520, 510)
 
