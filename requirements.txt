@@ -1,3 +1,2 @@
 pynput==1.4.2
 pyserial==3.4
-python-daemon=2.2.3

@@ -1,13 +1,15 @@
-# !/usr/bin/python
-import daemon
 import threading
+import os
 import serial
 from pynput.mouse import Button, Controller
 
 
-SERIAL_PORT = "/dev/ttyUSB0"
-BAUDRATE = 9600
-BUTTON_POSITION = (1520, 510)
+SERIAL_PORT = os.environ.get('BTN_PORT')
+BAUDRATE = os.environ.get('BTN_RATE')
+BUTTON_POSITION = [int(v) for v in os.environ.get('BTN_POS').split(',')]
+
+
+mouse = Controller()
 
 
 class ClickMouse(threading.Thread):
@@ -21,7 +23,6 @@ class ClickMouse(threading.Thread):
         mouse.click(self.button)
 
 
-mouse = Controller()
 click_thread = ClickMouse(BUTTON_POSITION)
 click_thread.start()
 
@@ -44,9 +45,7 @@ class InputHandler(object):
                 self.data[idx] = pin_data
 
     def pin_changed(self, idx, value):
-        print 'Pin%s changed to %s' % (idx, value)
         if idx == 0:
-            print 'Button clicked!'
             click_thread.click_button()
 
 
@@ -54,7 +53,6 @@ port = serial.Serial(SERIAL_PORT, BAUDRATE)
 handler = InputHandler()
 
 
-with daemon.DaemonContext():
-    while True:
-        port.write('$086\r')
-        handler.write_data(port.read(8))
+while True:
+    port.write('$086\r')
+    handler.write_data(port.read(8))
