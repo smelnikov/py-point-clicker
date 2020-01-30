@@ -28,23 +28,35 @@ click_thread.start()
 
 
 class InputHandler(object):
+    initial_bytes = b'!3FFF00'
+
     def __init__(self):
-        self.data = [None for i in range(0, 14)]
+        self._initial = [pin for pin in self.parse_data(self.initial_bytes)]
+        self._data = self._initial.copy()
 
     def parse_data(self, value):
-        if value[0] == '!':
-            pin8_13 = str(bin(int('0x' + value[1] + value[2], 16))[2:]).zfill(6)
-            pin0_7 = str(bin(int('0x' + value[3] + value[4], 16))[2:]).zfill(8)
-            return pin8_13 + pin0_7
+        """ Parse bytes to values """
+        if value[0] == b'!'[0]:
+            pin13to8 = str(bin(int('0x' + value[1:3].decode(), 16))[2:]).zfill(6)
+            pin0_7 = str(bin(int('0x' + value[3:5].decode(), 16))[2:]).zfill(8)
+            return pin13to8 + pin0_7
 
-    def write_data(self, value):
+    def data(self, value):
+        """ Set values for pins from parsed data """
         if value:
             for (idx, pin_data) in enumerate(reversed(self.parse_data(value))):
-                if self.data[idx] and self.data[idx] != pin_data:
+                if self._data[idx] != pin_data:
                     self.pin_changed(idx, pin_data)
-                self.data[idx] = pin_data
+
+                    if self._initial[idx] == pin_data:
+                        self.pin_pressed(idx)
+                self._data[idx] = pin_data
 
     def pin_changed(self, idx, value):
+        """ Handle pin changed value """
+
+    def pin_pressed(self, idx):
+        """ Handle pin pressed (changed value to initial) """
         if idx == 0:
             click_thread.click_button()
 
@@ -54,5 +66,5 @@ handler = InputHandler()
 
 
 while True:
-    port.write('$086\r')
-    handler.write_data(port.read(8))
+    port.write(b'$086\r')
+    handler.data(port.read(8))
